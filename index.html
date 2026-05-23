@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>星寰 - 3D太阳系全息粒子交互艺术装置</title>
+  <style>
+    :root {
+      --active-theme-color: #ffd700;
+      --active-glow-color: rgba(255, 215, 0, 0.45);
+      --glass-bg: rgba(10, 10, 15, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.12);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 顶部 HUD 面板 */
+    .hud-panel {
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      z-index: 10;
+      width: 330px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 20px;
+      color: #fff;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+      transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+
+    .hud-toggle-trigger {
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      z-index: 9;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      transition: all 0.3s ease;
+    }
+
+    .hud-panel h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff, var(--active-theme-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 15px var(--active-glow-color);
+    }
+
+    .hud-panel p {
+      font-size: 0.8rem;
+      color: #aaa;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .status-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .status-light {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #007aff;
+      box-shadow: 0 0 10px #007aff;
+    }
+
+    .status-light.searching {
+      background-color: #ffb300;
+      box-shadow: 0 0 10px #ffb300;
+      animation: blink 1.2s infinite alternate;
+    }
+
+    .status-light.active {
+      background-color: #34c759;
+      box-shadow: 0 0 12px #34c759;
+    }
+
+    @keyframes blink {
+      0% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    .status-text {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #e5e7eb;
+    }
+
+    .hud-btn {
+      width: 100%;
+      background: var(--active-theme-color);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 6px 15px var(--active-glow-color);
+    }
+
+    .hud-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px var(--active-glow-color);
+    }
+
+    .hud-btn.active {
+      background: #ff3b30;
+      color: #fff;
+      box-shadow: 0 6px 15px rgba(255, 59, 48, 0.4);
+    }
+
+    .controls-guide {
+      margin-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 12px;
+      font-size: 0.75rem;
+      color: #888;
+      list-style-type: none;
+    }
+
+    .controls-guide li {
+      margin-bottom: 6px;
+      position: relative;
+      padding-left: 14px;
+      line-height: 1.4;
+    }
+
+    .controls-guide li::before {
+      content: "•";
+      color: var(--active-theme-color);
+      position: absolute;
+      left: 0;
+      font-size: 1rem;
+      top: -1px;
+    }
+
+    /* 悬浮摄像头预览窗 */
+    #camera-preview {
+      position: absolute;
+      top: 25px;
+      right: 25px;
+      z-index: 10;
+      width: 200px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 6px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      display: none;
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #e5e7eb;
+      font-size: 0.7rem;
+      margin-bottom: 6px;
+      padding: 0 4px;
+    }
+
+    .close-preview {
+      cursor: pointer;
+      color: #888;
+      transition: color 0.2s;
+    }
+
+    .close-preview:hover {
+      color: #ff3b30;
+    }
+
+    .video-viewport {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #webcam {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+    }
+
+    #skeleton-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    /* 底部拟真玻璃态极简灵动岛 */
+    .dock-island {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--glass-bg);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border: 1px solid var(--glass-border);
+      border-radius: 30px;
+      padding: 8px 20px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.75), inset 0 1px 2px rgba(255, 255, 255, 0.15);
+      z-index: 10;
+      height: 48px;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .dock-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 
+                  inset -3px -3px 8px rgba(0, 0, 0, 0.8), 
+                  inset 3px 3px 8px rgba(255, 255, 255, 0.45);
+      position: relative;
+    }
+
+    .dock-btn:hover {
+      transform: scale(1.15) translateY(-2px);
+    }
+
+    .dock-btn.active {
+      border-color: #fff;
+      box-shadow: 0 0 15px var(--btn-glow),
+                  0 4px 10px rgba(0, 0, 0, 0.5), 
+                  inset -3px -3px 8px rgba(0, 0, 0, 0.8), 
+                  inset 3px 3px 8px rgba(255, 255, 255, 0.45);
+      transform: scale(1.08);
+    }
+
+    .btn-gold {
+      background: radial-gradient(circle at 35% 35%, #fff1b8, #cca200, #3d2b00);
+      --btn-glow: rgba(255, 215, 0, 0.8);
+    }
+    .btn-red {
+      background: radial-gradient(circle at 35% 35%, #ff9e9e, #cc0000, #400000);
+      --btn-glow: rgba(255, 60, 60, 0.8);
+    }
+    .btn-purple {
+      background: radial-gradient(circle at 35% 35%, #fbb6ff, #9900cc, #300040);
+      --btn-glow: rgba(220, 100, 255, 0.8);
+    }
+    .btn-white {
+      background: radial-gradient(circle at 35% 35%, #ffffff, #8c8c8c, #1a1a1a);
+      --btn-glow: rgba(240, 240, 255, 0.8);
+    }
+
+    .dock-divider {
+      width: 1px;
+      height: 18px;
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .physics-toggle-btn {
+      background: transparent;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 5px 12px;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .physics-toggle-btn.active {
+      color: #007aff;
+      background-color: rgba(0, 122, 255, 0.15);
+    }
+
+    .physics-toggle-btn:hover {
+      color: #fff;
+    }
+
+    /* 移动端响应式布局优化 */
+    @media (max-width: 768px) {
+      .hud-panel {
+        display: none;
+      }
+      .hud-toggle-trigger {
+        display: flex;
+        top: 15px;
+        left: 15px;
+        width: 38px;
+        height: 38px;
+      }
+      #camera-preview {
+        top: auto;
+        bottom: 120px;
+        right: 15px;
+        width: 110px;
+      }
+      .dock-island {
+        padding: 6px 14px;
+        gap: 10px;
+        bottom: 20px;
+        height: 44px;
+        border-radius: 22px;
+      }
+      .dock-btn {
+        width: 24px;
+        height: 24px;
+      }
+      .physics-toggle-btn {
+        padding: 4px 8px;
+        font-size: 0.68rem;
+      }
+    }
+    @media (min-width: 769px) {
+      .hud-toggle-trigger {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="canvas-container">
+    <canvas id="render-canvas"></canvas>
+  </div>
+
+  <div class="hud-toggle-trigger" id="hud-toggle-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+  </div>
+
+  <!-- HUD 操控台 -->
+  <div class="hud-panel" id="hud-pnl">
+    <h1>全息星寰太阳系</h1>
+    <p>底层架构采用防御性编程。中央由核心大字粒子构成“太阳”。外围基于斐波那契球面算法生成 3D 旋转公转行星，在同一个 3D 全局旋转矩阵中同步深度运算。</p>
+    
+    <div class="status-container">
+      <div id="status-indicator" class="status-light"></div>
+      <div id="status-msg" class="status-text">系统就绪 | 视角缩放: 1.00x</div>
+    </div>
+
+    <button id="camera-trigger" class="hud-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+      激活隔空手势
+    </button>
+
+    <ul class="controls-guide">
+      <li><strong>全端无限缩放：</strong>滚轮或双指张合体验穿梭在粒子与跨越星系层级的无限视差 [0.005x - 150.0x]。</li>
+      <li><strong>局部流体：</strong>快速划过引发排斥风暴吹散行星。粒子在运动停止后优雅弹性复位。</li>
+      <li><strong>隔空手势：</strong>握拳凝聚重组，手掌全开大爆炸。</li>
+    </ul>
+  </div>
+
+  <!-- 摄像头预览窗 -->
+  <div id="camera-preview">
+    <div class="preview-header">
+      <span>AI 空间几何感知</span>
+      <span class="close-preview" id="close-cam-btn">✕ 关闭</span>
+    </div>
+    <div class="video-viewport">
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="skeleton-overlay"></canvas>
+    </div>
+  </div>
+
+  <!-- 底部拟真玻璃岛 -->
+  <div class="dock-island">
+    <div class="dock-btn btn-gold active" data-theme="gold"></div>
+    <div class="dock-btn btn-red" data-theme="red"></div>
+    <div class="dock-btn btn-purple" data-theme="purple"></div>
+    <div class="dock-btn btn-white" data-theme="white"></div>
+
+    <div class="dock-divider"></div>
+
+    <button class="physics-toggle-btn active" id="btn-state-assemble">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+      凝聚
+    </button>
+    <button class="physics-toggle-btn" id="btn-state-explode">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 2v20M2 12h20M18.36 5.64l-12.72 12.72M5.64 5.64l12.72 12.72"></path></svg>
+      爆炸
+    </button>
+  </div>
+
+  <script>
+    // V30 OOM与崩溃修复版：已锁定离线画布尺寸并统一数据结构
+    
+    // ==========================================
+    // 1. 全局配置与状态机
+    // ==========================================
+    const canvas = document.getElementById('render-canvas');
+    const ctx = canvas.getContext('2d');
+    let dpr = window.devicePixelRatio || 1;
+
+    const STATES = { ASSEMBLED: 'assembled', EXPLODED: 'exploded' };
+    let currentPhysicsState = STATES.ASSEMBLED;
+
+    // 视角矩阵与投影
+    let angleX = 0.35; 
+    let angleY = -0.4; 
+    let targetAngleX = 0.35;
+    let targetAngleY = -0.4;
+    let zoom = 1.0;
+    let targetZoom = 1.0;
+    let baseRenderScale = 1.0; 
+    
+    let isDragging = false;
+    let startMouseX = 0, startMouseY = 0;
+    let width, height, centerX, centerY;
+
+    // 粒子与天体池
+    let particles = [];
+    const backgroundStars = [];
+    const meteors = [];
+    const planets = []; // 行星
+
+    // 材质
+    const sprites = {};
+    let activeTheme = 'gold';
+    let prevTheme = 'gold';
+
+    // 空间扫光颜色渐变
+    let isSweeping = false;
+    let sweepX = -600; 
+    const sweepSpeed = 16;
+    const sweepFeather = 160; 
+
+    // 局部流体排斥
+    let handAttractor = { x: 0, y: 0, z: 0 };
+    let lerpedHand = { x: 0, y: 0, z: 0 };
+    let prevAttractor = { x: 0, y: 0, z: 0 };
+    let attractorVelocity = { x: 0, y: 0, z: 0 };
+    let smoothMotionSpeed = 0; 
+
+    let handActive = false;
+    let mouseActive = false;
+    let mouseCoords = { x: 0, y: 0 };
+    let prevMouseCoords = { x: 0, y: 0 };
+
+    const THEMES = {
+      gold: { rgb: { r: 255, g: 215, b: 0 }, core: '#ffffff', glow: 'rgba(255, 215, 0, 0.22)', label: '#ffd700', textGlow: 'rgba(255, 215, 0, 0.45)' },
+      red: { rgb: { r: 255, g: 60, b: 60 }, core: '#ffffff', glow: 'rgba(255, 60, 60, 0.35)', label: '#ff3b30', textGlow: 'rgba(255, 59, 48, 0.5)' },
+      purple: { rgb: { r: 220, g: 100, b: 255 }, core: '#ffffff', glow: 'rgba(220, 100, 255, 0.35)', label: '#cc00ff', textGlow: 'rgba(204, 0, 255, 0.5)' },
+      white: { rgb: { r: 240, g: 240, b: 255 }, core: '#ffffff', glow: 'rgba(240, 240, 255, 0.35)', label: '#ffffff', textGlow: 'rgba(255, 255, 255, 0.5)' }
+    };
+
+    // ==========================================
+    // 2. 防御性编程：完全统一的粒子数据结构模板工厂
+    // ==========================================
+    function createSafeParticle(override = {}) {
+      return {
+        x: Number.isFinite(override.x) ? override.x : 0,
+        y: Number.isFinite(override.y) ? override.y : 0,
+        z: Number.isFinite(override.z) ? override.z : 0,
+        bx: Number.isFinite(override.bx) ? override.bx : 0,
+        by: Number.isFinite(override.by) ? override.by : 0,
+        bz: Number.isFinite(override.bz) ? override.bz : 0,
+        ex: Number.isFinite(override.ex) ? override.ex : 0,
+        ey: Number.isFinite(override.ey) ? override.ey : 0,
+        ez: Number.isFinite(override.ez) ? override.ez : 0,
+        vx: Number.isFinite(override.vx) ? override.vx : 0,
+        vy: Number.isFinite(override.vy) ? override.vy : 0,
+        vz: Number.isFinite(override.vz) ? override.vz : 0,
+        size: Number.isFinite(override.size) ? override.size : 1.5,
+        alpha: Number.isFinite(override.alpha) ? override.alpha : 1.0,
+        type: override.type || 'core', // 'core', 'ring', 'planet'
+        colorType: override.colorType || null, 
+        orbitRadius: Number.isFinite(override.orbitRadius) ? override.orbitRadius : 0,
+        orbitSpeed: Number.isFinite(override.orbitSpeed) ? override.orbitSpeed : 0,
+        orbitAngle: Number.isFinite(override.orbitAngle) ? override.orbitAngle : 0,
+        tiltX: Number.isFinite(override.tiltX) ? override.tiltX : 0,
+        tiltY: Number.isFinite(override.tiltY) ? override.tiltY : 0,
+        lx: Number.isFinite(override.lx) ? override.lx : 0,
+        ly: Number.isFinite(override.ly) ? override.ly : 0,
+        lz: Number.isFinite(override.lz) ? override.lz : 0,
+        planetRef: override.planetRef || null
+      };
+    }
+
+    // ==========================================
+    // 3. 高精离线精灵生成 (64x64 HD Anti-Blur)
+    // ==========================================
+    function initSprites() {
+      Object.keys(THEMES).forEach(key => {
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = 64;
+        offscreenCanvas.height = 64;
+        const oCtx = offscreenCanvas.getContext('2d');
+
+        const radialGrad = oCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        radialGrad.addColorStop(0, THEMES[key].glow);
+        radialGrad.addColorStop(0.35, THEMES[key].glow);
+        radialGrad.addColorStop(0.7, 'rgba(0,0,0,0.01)');
+        radialGrad.addColorStop(1, 'rgba(0,0,0,0)');
+
+        oCtx.fillStyle = radialGrad;
+        oCtx.fillRect(0, 0, 64, 64);
+
+        oCtx.beginPath();
+        oCtx.arc(32, 32, 2.2, 0, Math.PI * 2);
+        oCtx.fillStyle = THEMES[key].core;
+        oCtx.shadowColor = THEMES[key].label;
+        oCtx.shadowBlur = 8;
+        oCtx.fill();
+
+        sprites[key] = offscreenCanvas;
+      });
+    }
+
+    // ==========================================
+    // 4. 自适应分辨率计算 (防拉伸)
+    // ==========================================
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      centerX = width / 2;
+      centerY = height / 2;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      baseRenderScale = Math.min(width, height) / 800;
+    }
+
+    // ==========================================
+    // 5. 安全扫描主体粒子生成 (Safe Offscreen Canvas OOM隔离)
+    // ==========================================
+    function buildStateData() {
+      // 锁死离线扫描画布尺寸，绝对不跟随高分屏乘倍，防止大图扫描导致崩溃溢出！
+      const SCAN_WIDTH = 800;
+      const SCAN_HEIGHT = 800;
+
+      const scanCanvas = document.createElement('canvas');
+      scanCanvas.width = SCAN_WIDTH;
+      scanCanvas.height = SCAN_HEIGHT;
+      const sCtx = scanCanvas.getContext('2d');
+      sCtx.clearRect(0, 0, SCAN_WIDTH, SCAN_HEIGHT);
+
+      sCtx.fillStyle = '#ffffff';
+      sCtx.strokeStyle = '#ffffff';
+
+      // 绘制中心标志
+      sCtx.lineWidth = 4;
+      sCtx.beginPath();
+      sCtx.arc(400, 260, 110, 0, Math.PI * 2);
+      sCtx.stroke();
+
+      sCtx.beginPath();
+      sCtx.arc(400, 260, 95, 0, Math.PI * 2);
+      sCtx.stroke();
+
+      draw5Star(sCtx, 400, 220, 40, 16);
+
+      sCtx.fillRect(340, 290, 120, 22);
+      sCtx.fillRect(352, 275, 96, 14);
+      sCtx.fillRect(380, 257, 40, 18);
+
+      // 第一行大字：我爱祖国
+      sCtx.textAlign = 'center';
+      sCtx.textBaseline = 'middle';
+      sCtx.font = '900 85px "PingFang SC", "Microsoft YaHei", sans-serif';
+      sCtx.fillText('我爱祖国', 400, 420);
+
+      // 第二行口号
+      sCtx.font = '900 32px "PingFang SC", "Microsoft YaHei", sans-serif';
+      sCtx.fillText('人民有信仰  国家有力量  民族有希望', 400, 500);
+
+      // 第三行口号
+      sCtx.font = '900 38px "PingFang SC", "Microsoft YaHei", sans-serif';
+      sCtx.fillText('爱党  爱国  爱人民', 400, 570);
+
+      const imgData = sCtx.getImageData(0, 0, SCAN_WIDTH, SCAN_HEIGHT);
+      const step = 4; 
+
+      for (let y = 0; y < SCAN_HEIGHT; y += step) {
+        for (let x = 0; x < SCAN_WIDTH; x += step) {
+          const idx = (y * SCAN_WIDTH + x) * 4;
+          const alpha = imgData.data[idx + 3];
+          if (alpha > 120) {
+            const px = x - 400;
+            const py = y - 350;
+            const pz = (Math.random() - 0.5) * 8;
+
+            // 导入统一化安全工厂构建，彻底排除 undefined 风险
+            const p = createSafeParticle({
+              x: px + (Math.random() - 0.5) * 1600,
+              y: py + (Math.random() - 0.5) * 1600,
+              z: pz + (Math.random() - 0.5) * 1600,
+              bx: px,
+              by: py,
+              bz: pz,
+              ex: px * 4.5 + (Math.random() - 0.5) * 600,
+              ey: py * 4.5 + (Math.random() - 0.5) * 600,
+              ez: pz * 4.5 + (Math.random() - 0.5) * 600,
+              size: Math.random() * 1.5 + 1.2,
+              alpha: alpha / 255,
+              type: 'core'
+            });
+            particles.push(p);
+          }
+        }
+      }
+    }
+
+    function draw5Star(ctx, cx, cy, r1, r2) {
+      let rot = Math.PI / 2 * 3;
+      let x = cx, y = cy;
+      let step = Math.PI / 5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r1);
+      for (let i = 0; i < 5; i++) {
+        x = cx + Math.cos(rot) * r1;
+        y = cy + Math.sin(rot) * r1;
+        ctx.lineTo(x, y);
+        rot += step;
+        x = cx + Math.cos(rot) * r2;
+        y = cy + Math.sin(rot) * r2;
+        ctx.lineTo(x, y);
+        rot += step;
+      }
+      ctx.lineTo(cx, cy - r1);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 摊开的倾斜渐密星环 (恒星轨道)
+    function buildDensityTiltedRings(count, baseRadius, width, tiltX, tiltY, colorTheme) {
+      for (let i = 0; i < count; i++) {
+        const randU = Math.pow(Math.random(), 3) - Math.pow(Math.random(), 3);
+        const radius = baseRadius + randU * (width / 2);
+        const baseAngle = Math.random() * Math.PI * 2;
+
+        let localX = radius * Math.cos(baseAngle);
+        let localZ = radius * Math.sin(baseAngle);
+        let localY = (Math.random() - 0.5) * 5;
+
+        let cosP = Math.cos(tiltX), sinP = Math.sin(tiltX);
+        let ty1 = localY * cosP - localZ * sinP;
+        let tz1 = localY * sinP + localZ * cosP;
+
+        let cosY = Math.cos(tiltY), sinY = Math.sin(tiltY);
+        let tx2 = localX * cosY - tz1 * sinY;
+        let tz2 = localX * sinY + tz1 * cosY;
+
+        const p = createSafeParticle({
+          x: tx2 + (Math.random() - 0.5) * 900,
+          y: ty1 + (Math.random() - 0.5) * 900,
+          z: tz2 + (Math.random() - 0.5) * 900,
+          bx: tx2,
+          by: ty1,
+          bz: tz2,
+          ex: tx2 * 2.8,
+          ey: ty1 * 2.8,
+          ez: tz2 * 2.8,
+          orbitRadius: radius,
+          orbitAngle: baseAngle,
+          orbitSpeed: (0.006 + (1 / radius) * 0.12) * (Math.random() * 0.35 + 0.85),
+          tiltX: tiltX,
+          tiltY: tiltY,
+          size: Math.random() * 1.6 + 1.2,
+          alpha: Math.random() * 0.6 + 0.4,
+          type: 'ring',
+          colorType: colorTheme
+        });
+        particles.push(p);
+      }
+    }
+
+    // ==========================================
+    // 6. 3D 行星斐波那契球面生成系统 (统一数据结构)
+    // ==========================================
+    function create3DPlanet(sphereRadius, orbitRadius, orbitSpeed, count, colorType) {
+      const goldenRatio = (1 + Math.sqrt(5)) / 2;
+
+      const pConfig = {
+        sphereRadius,
+        orbitRadius,
+        orbitSpeed,
+        colorType,
+        phase: Math.random() * Math.PI * 2,
+        currentCX: 0, currentCY: 0, currentCZ: 0
+      };
+
+      planets.push(pConfig);
+
+      for (let i = 0; i < count; i++) {
+        const theta = 2 * Math.PI * i / goldenRatio;
+        const phi = Math.acos(1 - 2 * (i + 0.5) / count);
+
+        const lx = sphereRadius * Math.sin(phi) * Math.cos(theta);
+        const ly = sphereRadius * Math.sin(phi) * Math.sin(theta);
+        const lz = sphereRadius * Math.cos(phi);
+
+        // 统一在安全工厂中生成，排除 undefined
+        const p = createSafeParticle({
+          x: (Math.random() - 0.5) * 1600,
+          y: (Math.random() - 0.5) * 1600,
+          z: (Math.random() - 0.5) * 1600,
+          size: Math.random() * 1.5 + 1.2,
+          alpha: Math.random() * 0.45 + 0.55,
+          type: 'planet',
+          colorType: colorType,
+          lx: lx,
+          ly: ly,
+          lz: lz
+        });
+        p.planetRef = pConfig;
+        particles.push(p);
+      }
+    }
+
+    // 运行行星公转轨道物理核算
+    function updatePlanetarySystem(delta) {
+      planets.forEach(p => {
+        p.phase += p.orbitSpeed * delta * 0.15;
+        p.currentCX = p.orbitRadius * Math.cos(p.phase);
+        p.currentCZ = p.orbitRadius * Math.sin(p.phase);
+        p.currentCY = Math.sin(p.phase) * p.orbitRadius * 0.12; 
+      });
+
+      particles.forEach(p => {
+        if (p.type === 'planet' && p.planetRef) {
+          const parent = p.planetRef;
+          p.bx = parent.currentCX + p.lx;
+          p.by = parent.currentCY + p.ly;
+          p.bz = parent.currentCZ + p.lz;
+
+          const explodeFactor = 2.6;
+          p.ex = parent.currentCX * explodeFactor + p.lx * 3;
+          p.ey = parent.currentCY * explodeFactor + p.ly * 3;
+          p.ez = parent.currentCZ * explodeFactor + p.lz * 3;
+        }
+      });
+    }
+
+    // 背景星
+    function initDeepSpace() {
+      for (let i = 0; i < 150; i++) {
+        backgroundStars.push({
+          x: (Math.random() - 0.5) * width * 1.8,
+          y: (Math.random() - 0.5) * height * 1.8,
+          size: Math.random() * 1.5 + 0.5,
+          brightness: Math.random(),
+          speed: 0.012 + Math.random() * 0.02
+        });
+      }
+    }
+
+    // 电影级高保真流星
+    function spawnComets() {
+      if (Math.random() < 0.012 && meteors.length < 4) {
+        const startR = 300 + Math.random() * 150;
+        const angle = Math.random() * Math.PI * 2;
+        const startZ = (Math.random() - 0.5) * 300;
+
+        meteors.push({
+          x: startR * Math.cos(angle),
+          y: startR * Math.sin(angle) - 100,
+          z: startZ,
+          vx: -4 - Math.random() * 5,
+          vy: 4 + Math.random() * 5,
+          vz: (Math.random() - 0.5) * 2,
+          size: 2.2 + Math.random() * 2.5,
+          length: 12 + Math.random() * 8, 
+          alpha: 1.0,
+          life: 1.0,
+          decay: 0.008 + Math.random() * 0.01
+        });
+      }
+
+      for (let i = meteors.length - 1; i >= 0; i--) {
+        const m = meteors[i];
+        m.x += m.vx;
+        m.y += m.vy;
+        m.z += m.vz;
+        m.life -= m.decay;
+        if (m.life <= 0) meteors.splice(i, 1);
+      }
+    }
+
+    function renderComets() {
+      for (let i = 0; i < meteors.length; i++) {
+        const m = meteors[i];
+        const projHead = project3D(m.x, m.y, m.z);
+        const projTail = project3D(m.x - m.vx * m.length, m.y - m.vy * m.length, m.z - m.vz * m.length);
+
+        if (projHead.scale <= 0.01 || projTail.scale <= 0.01) continue;
+
+        const cometGrad = ctx.createLinearGradient(projHead.x, projHead.y, projTail.x, projTail.y);
+        const activeRGB = THEMES[activeTheme].rgb;
+
+        cometGrad.addColorStop(0, `rgba(255, 255, 255, ${m.life})`);
+        cometGrad.addColorStop(0.12, `rgba(${activeRGB.r}, ${activeRGB.g}, ${activeRGB.b}, ${m.life * 0.85})`);
+        cometGrad.addColorStop(1.0, `rgba(${activeRGB.r}, ${activeRGB.g}, ${activeRGB.b}, 0)`);
+
+        ctx.strokeStyle = cometGrad;
+        ctx.lineWidth = m.size * projHead.scale;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(projHead.x, projHead.y);
+        ctx.lineTo(projTail.x, projTail.y);
+        ctx.stroke();
+
+        const headGlowSize = m.size * projHead.scale * 6.5;
+        const sprite = sprites[activeTheme];
+        ctx.save();
+        ctx.globalAlpha = m.life * 0.6;
+        ctx.drawImage(sprite, projHead.x - headGlowSize / 2, projHead.y - headGlowSize / 2, headGlowSize, headGlowSize);
+        ctx.restore();
+      }
+    }
+
+    // ==========================================
+    // 7. 三维空间投影变换 (全局完全共享)
+    // ==========================================
+    function project3D(x, y, z) {
+      let scaledX = x * baseRenderScale;
+      let scaledY = y * baseRenderScale;
+      let scaledZ = z * baseRenderScale;
+
+      let cosY = Math.cos(angleY), sinY = Math.sin(angleY);
+      let x1 = scaledX * cosY - scaledZ * sinY;
+      let z1 = scaledX * sinY + scaledZ * cosY;
+
+      let cosX = Math.cos(angleX), sinX = Math.sin(angleX);
+      let y2 = scaledY * cosX - z1 * sinX;
+      let z2 = scaledY * sinX + z1 * cosX;
+
+      let fov = 650;
+      let cameraDist = 800 * zoom;
+      let scale = fov / (fov + z2 + cameraDist);
+      
+      let projX = centerX + x1 * scale;
+      let projY = centerY + y2 * scale;
+
+      return { x: projX, y: projY, scale: scale, depth: z2 };
+    }
+
+    // ==========================================
+    // 8. 动态局部弹性流体排斥力场与物理引擎
+    // ==========================================
+    function physicsEngine() {
+      let attractor = null;
+      let isMoving = false;
+
+      if (handActive) {
+        attractor = lerpedHand;
+        const dx = lerpedHand.x - prevAttractor.x;
+        const dy = lerpedHand.y - prevAttractor.y;
+        attractorVelocity.x = dx;
+        attractorVelocity.y = dy;
+        isMoving = true;
+      } else if (mouseActive) {
+        attractor = {
+          x: (mouseCoords.x - centerX) * 1.5 * zoom,
+          y: (mouseCoords.y - centerY) * 1.5 * zoom,
+          z: 0
+        };
+        const dx = mouseCoords.x - prevMouseCoords.x;
+        const dy = mouseCoords.y - prevMouseCoords.y;
+        attractorVelocity.x = dx * zoom;
+        attractorVelocity.y = dy * zoom;
+        isMoving = true;
+      }
+
+      if (isMoving) {
+        const instantSpeed = Math.sqrt(attractorVelocity.x*attractorVelocity.x + attractorVelocity.y*attractorVelocity.y);
+        smoothMotionSpeed += (instantSpeed - smoothMotionSpeed) * 0.15;
+      } else {
+        smoothMotionSpeed *= 0.85;
+      }
+
+      if (attractor) {
+        prevAttractor.x = attractor.x;
+        prevAttractor.y = attractor.y;
+        prevAttractor.z = attractor.z;
+      }
+
+      // 排斥范围
+      const repulsionRadius = 110 + Math.min(180, smoothMotionSpeed * 5.2);
+      const repulsionStrength = 1.2 + Math.min(5.5, smoothMotionSpeed * 0.15);
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        if (p.type === 'ring') {
+          p.orbitAngle += p.orbitSpeed;
+          let lx = p.orbitRadius * Math.cos(p.orbitAngle);
+          let lz = p.orbitRadius * Math.sin(p.orbitAngle);
+          let ly = 0;
+
+          let cosP = Math.cos(p.tiltX), sinP = Math.sin(p.tiltX);
+          let ty1 = ly * cosP - lz * sinP;
+          let tz1 = ly * sinP + lz * cosP;
+
+          let cosY = Math.cos(p.tiltY), sinY = Math.sin(p.tiltY);
+          p.bx = lx * cosY - tz1 * sinY;
+          p.by = ty1;
+          p.bz = lx * sinY + tz1 * cosY;
+        }
+
+        let tx = currentPhysicsState === STATES.ASSEMBLED ? p.bx : p.ex;
+        let ty = currentPhysicsState === STATES.ASSEMBLED ? p.by : p.ey;
+        let tz = currentPhysicsState === STATES.ASSEMBLED ? p.bz : p.ez;
+
+        if (attractor) {
+          let dx = p.x - attractor.x;
+          let dy = p.y - attractor.y;
+          let dz = p.z - attractor.z;
+          let dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+          if (dist < repulsionRadius) {
+            let pushForce = (1.0 - dist / repulsionRadius) * repulsionStrength;
+            
+            p.vx += (dx / dist) * pushForce * 3.5;
+            p.vy += (dy / dist) * pushForce * 3.5;
+            p.vz += (dz / dist) * pushForce * 3.5;
+
+            p.vx += (-dz / dist) * pushForce * 0.45;
+            p.vz += (dx / dist) * pushForce * 0.45;
+          }
+        }
+
+        p.vx *= 0.81;
+        p.vy *= 0.81;
+        p.vz *= 0.81;
+
+        p.x += p.vx + (tx - p.x) * 0.075;
+        p.y += p.vy + (ty - p.y) * 0.075;
+        p.z += p.vz + (tz - p.z) * 0.075;
+      }
+
+      prevMouseCoords.x = mouseCoords.x;
+      prevMouseCoords.y = mouseCoords.y;
+    }
+
+    // ==========================================
+    // 9. 融合渲染主循环
+    // ==========================================
+    let lastTime = Date.now();
+
+    function render() {
+      const now = Date.now();
+      const delta = (now - lastTime) / 16.66; 
+      lastTime = now;
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, width, height);
+
+      // 绘制背景微星云
+      const nebGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.6);
+      nebGrad.addColorStop(0, 'rgba(15, 10, 30, 0.45)');
+      nebGrad.addColorStop(0.5, 'rgba(5, 5, 15, 0.15)');
+      nebGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = nebGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // 背景星
+      for (let i = 0; i < backgroundStars.length; i++) {
+        const s = backgroundStars[i];
+        s.brightness += s.speed * delta;
+        let alpha = 0.25 + Math.abs(Math.sin(s.brightness)) * 0.7;
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fillRect(s.x + centerX, s.y + centerY, s.size, s.size);
+      }
+
+      spawnComets();
+      renderComets();
+
+      // 更新行星运行轨道
+      updatePlanetarySystem(delta);
+
+      physicsEngine();
+
+      if (isSweeping) {
+        sweepX += sweepSpeed * delta;
+        if (sweepX > 620) {
+          isSweeping = false;
+        }
+      }
+
+      const projectedList = [];
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        
+        // 防御性：避免NaN值进入投影运算导致页面假死
+        if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) {
+          continue;
+        }
+
+        const proj = project3D(p.x, p.y, p.z);
+        
+        if (proj.x >= -30 && proj.x <= width + 30 && proj.y >= -30 && proj.y <= height + 30) {
+          projectedList.push({ p: p, proj: proj });
+        }
+      }
+
+      // 统一进行 3D 深度矩阵投影排序，彻底解决遮挡 Bug
+      projectedList.sort((a, b) => b.proj.depth - a.proj.depth);
+
+      // 双层发光精灵混合渲染
+      for (let i = 0; i < projectedList.length; i++) {
+        const item = projectedList[i];
+        const p = item.p;
+        const proj = item.proj;
+
+        const pSize = p.size * proj.scale * 3.8;
+        if (pSize <= 0.2) continue;
+
+        let activeSpriteKey = p.colorType ? p.colorType : activeTheme;
+
+        // 扫刷面空间颜色过渡
+        if (isSweeping && !p.colorType) {
+          const distanceToSweep = p.bx - sweepX;
+          
+          let sweepWeight = 0; 
+          if (distanceToSweep < -sweepFeather) {
+            sweepWeight = 1.0;
+          } else if (distanceToSweep > sweepFeather) {
+            sweepWeight = 0.0;
+          } else {
+            sweepWeight = 1.0 - (distanceToSweep + sweepFeather) / (sweepFeather * 2);
+          }
+
+          if (sweepWeight < 1.0) {
+            ctx.save();
+            ctx.globalAlpha = p.alpha * Math.min(1.0, proj.scale * 1.5) * (1.0 - sweepWeight);
+            ctx.drawImage(sprites[prevTheme], proj.x - pSize / 2, proj.y - pSize / 2, pSize, pSize);
+            ctx.restore();
+          }
+          if (sweepWeight > 0.0) {
+            ctx.save();
+            ctx.globalAlpha = p.alpha * Math.min(1.0, proj.scale * 1.5) * sweepWeight;
+            ctx.drawImage(sprites[activeTheme], proj.x - pSize / 2, proj.y - pSize / 2, pSize, pSize);
+            ctx.restore();
+          }
+        } else {
+          ctx.save();
+          ctx.globalAlpha = p.alpha * Math.min(1.0, proj.scale * 1.5);
+          ctx.drawImage(sprites[activeSpriteKey], proj.x - pSize / 2, proj.y - pSize / 2, pSize, pSize);
+          ctx.restore();
+        }
+      }
+
+      if (!isDragging) {
+        targetAngleY += 0.0016 * delta;
+        angleX += (targetAngleX - angleX) * 0.08 * delta;
+        angleY += (targetAngleY - angleY) * 0.08 * delta;
+      } else {
+        angleX += (targetAngleX - angleX) * 0.18 * delta;
+        angleY += (targetAngleY - angleY) * 0.18 * delta;
+      }
+      zoom += (targetZoom - zoom) * 0.1 * delta;
+
+      indicatorText.innerHTML = `系统就绪 | 视角缩放: ${zoom.toFixed(2)}x`;
+    }
+
+    // 防御性主循环：捕获异常，绝不假死
+    function loop() {
+      try {
+        render();
+      } catch (err) {
+        console.error("渲染主循环故障自动熔断修复:", err);
+      }
+      requestAnimationFrame(loop);
+    }
+
+    // ==========================================
+    // 10. 极致防御性：全端无限 God-Eye 缩放交互 (拖拽/滚轮/双指)
+    // ==========================================
+    let touchStartDist = 0;
+    let initialZoom = 1;
+
+    function initInteraction() {
+      // 触发颜色扫刷
+      document.querySelectorAll('.dock-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (isSweeping) return; 
+          
+          document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          
+          prevTheme = activeTheme;
+          activeTheme = btn.dataset.theme;
+
+          isSweeping = true;
+          sweepX = -600;
+
+          const th = THEMES[activeTheme];
+          document.documentElement.style.setProperty('--active-theme-color', th.label);
+          document.documentElement.style.setProperty('--active-glow-color', th.textGlow);
+        });
+      });
+
+      const btnAssemble = document.getElementById('btn-state-assemble');
+      const btnExplode = document.getElementById('btn-state-explode');
+
+      btnAssemble.addEventListener('click', () => {
+        currentPhysicsState = STATES.ASSEMBLED;
+        btnAssemble.classList.add('active');
+        btnExplode.classList.remove('active');
+      });
+
+      btnExplode.addEventListener('click', () => {
+        currentPhysicsState = STATES.EXPLODED;
+        btnExplode.classList.add('active');
+        btnAssemble.classList.remove('active');
+      });
+
+      window.addEventListener('mousedown', (e) => {
+        if (e.clientY > height - 90 && e.clientX > width / 2 - 200 && e.clientX < width / 2 + 200) return;
+        isDragging = true;
+        startMouseX = e.clientX;
+        startMouseY = e.clientY;
+        prevMouseCoords.x = e.clientX;
+        prevMouseCoords.y = e.clientY;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        mouseCoords.x = e.clientX;
+        mouseCoords.y = e.clientY;
+        if (!isDragging) return;
+
+        const dx = e.clientX - startMouseX;
+        const dy = e.clientY - startMouseY;
+        targetAngleY = angleY + dx * 0.006;
+        targetAngleX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, angleX + dy * 0.006));
+        startMouseX = e.clientX;
+        startMouseY = e.clientY;
+      });
+
+      window.addEventListener('mouseup', () => { isDragging = false; });
+
+      // 无阻尼滚轮对数缩放
+      window.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const scaleFactor = 0.12;
+        if (e.deltaY < 0) {
+          targetZoom *= (1 + scaleFactor);
+        } else {
+          targetZoom /= (1 + scaleFactor);
+        }
+        
+        // 防御式判断，确保zoom永远在有效范围内，避免 NaN 导致卡死
+        if (!Number.isFinite(targetZoom)) targetZoom = 1.0;
+        targetZoom = Math.max(0.005, Math.min(150.0, targetZoom));
+      }, { passive: false });
+
+      // 移动端多指触控防空防御设计 (Mobile Touch Guards)
+      window.addEventListener('touchstart', (e) => {
+        if (!e.touches) return;
+        if (e.touches.length === 1 && e.touches[0]) {
+          isDragging = true;
+          startMouseX = e.touches[0].clientX;
+          startMouseY = e.touches[0].clientY;
+          mouseActive = true;
+          mouseCoords.x = e.touches[0].clientX;
+          mouseCoords.y = e.touches[0].clientY;
+          prevMouseCoords.x = e.touches[0].clientX;
+          prevMouseCoords.y = e.touches[0].clientY;
+        } else if (e.touches.length === 2 && e.touches[0] && e.touches[1]) {
+          e.preventDefault();
+          isDragging = false;
+          touchStartDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          initialZoom = targetZoom;
+        }
+      }, { passive: false });
+
+      window.addEventListener('touchmove', (e) => {
+        if (!e.touches) return;
+        if (e.touches.length === 1 && isDragging && e.touches[0]) {
+          const dx = e.touches[0].clientX - startMouseX;
+          const dy = e.touches[0].clientY - startMouseY;
+          targetAngleY = angleY + dx * 0.008;
+          targetAngleX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, angleX + dy * 0.008));
+          startMouseX = e.touches[0].clientX;
+          startMouseY = e.touches[0].clientY;
+
+          mouseCoords.x = e.touches[0].clientX;
+          mouseCoords.y = e.touches[0].clientY;
+        } else if (e.touches.length === 2 && e.touches[0] && e.touches[1]) {
+          e.preventDefault();
+          const dist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          if (Number.isFinite(touchStartDist) && touchStartDist > 0) {
+            const ratio = dist / touchStartDist;
+            targetZoom = Math.max(0.005, Math.min(150.0, initialZoom * ratio));
+          }
+        }
+      }, { passive: false });
+
+      window.addEventListener('touchend', () => {
+        isDragging = false;
+        mouseActive = false;
+        touchStartDist = 0;
+      });
+
+      const hudPnl = document.getElementById('hud-pnl');
+      const hudToggleBtn = document.getElementById('hud-toggle-btn');
+      hudToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hudPnl.style.display = hudPnl.style.display === 'block' ? 'none' : 'block';
+      });
+      window.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+          hudPnl.style.display = 'none';
+        }
+      });
+      hudPnl.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // ==========================================
+    // 11. AI 视觉感知及安全降级机制
+    // ==========================================
+    const cameraTrigger = document.getElementById('camera-trigger');
+    const closeCamBtn = document.getElementById('close-cam-btn');
+    const webcam = document.getElementById('webcam');
+    const skeletonCanvas = document.getElementById('skeleton-overlay');
+    const sCtx = skeletonCanvas.getContext('2d');
+    const previewBox = document.getElementById('camera-preview');
+    const indicatorLight = document.getElementById('status-indicator');
+
+    let isCameraActive = false;
+    let mpCamera = null;
+
+    function showNotification(msg) {
+      const banner = document.createElement('div');
+      banner.style.position = 'absolute';
+      banner.style.top = '25px';
+      banner.style.left = '50%';
+      banner.style.transform = 'translateX(-50%) translateY(-60px)';
+      banner.style.background = 'rgba(255, 59, 48, 0.85)';
+      banner.style.backdropFilter = 'blur(15px)';
+      banner.style.webkitBackdropFilter = 'blur(15px)';
+      banner.style.border = '1px solid rgba(255, 255, 255, 0.2)';
+      banner.style.color = '#fff';
+      banner.style.padding = '10px 20px';
+      banner.style.borderRadius = '30px';
+      banner.style.fontSize = '0.78rem';
+      banner.style.fontWeight = '600';
+      banner.style.zIndex = '1000';
+      banner.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.5)';
+      banner.style.transition = 'all 0.5s cubic-bezier(0.19, 1, 0.22, 1)';
+      banner.style.textAlign = 'center';
+      banner.style.whiteSpace = 'nowrap';
+      banner.innerHTML = msg;
+      
+      document.body.appendChild(banner);
+      
+      requestAnimationFrame(() => {
+        banner.style.transform = 'translateX(-50%) translateY(0)';
+      });
+      
+      setTimeout(() => {
+        banner.style.transform = 'translateX(-50%) translateY(-100px)';
+        banner.style.opacity = '0';
+        setTimeout(() => { banner.remove(); }, 500);
+      }, 3500);
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.crossOrigin = "anonymous";
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    async function triggerCameraSystem() {
+      if (isCameraActive) {
+        shutdownCamera();
+        return;
+      }
+
+      try {
+        cameraTrigger.disabled = true;
+        cameraTrigger.innerHTML = `唤醒 AI 引擎中...`;
+        indicatorLight.className = "status-light searching";
+
+        await Promise.all([
+          loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js'),
+          loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js')
+        ]);
+
+        const hands = new Hands({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+          maxNumHands: 1,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.6,
+          minTrackingConfidence: 0.6
+        });
+
+        hands.onResults(onHandGestureTracking);
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("unsecured");
+        }
+
+        mpCamera = new Camera(webcam, {
+          onFrame: async () => {
+            await hands.send({ image: webcam });
+          },
+          width: 320,
+          height: 240
+        });
+
+        await mpCamera.start().catch(err => {
+          throw new Error("blocked");
+        });
+
+        isCameraActive = true;
+        previewBox.style.display = 'block';
+        cameraTrigger.innerHTML = `关闭手势`;
+        cameraTrigger.classList.add('active');
+        cameraTrigger.disabled = false;
+        indicatorLight.className = "status-light active";
+
+      } catch (err) {
+        console.warn("Camera fallback initiated:", err.message);
+        if (err.message === "unsecured") {
+          showNotification("📷 摄像头需在 HTTPS/Localhost 下开启，已自动切换为触控/鼠标模式");
+        } else if (err.message === "blocked") {
+          showNotification("📷 摄像头访问被拒绝，已自动切换为触控/鼠标模式");
+        } else {
+          showNotification("📷 摄像头加载错误，请使用触控或鼠标交互");
+        }
+        shutdownCamera();
+      }
+    }
+
+    function shutdownCamera() {
+      if (mpCamera) mpCamera.stop();
+      isCameraActive = false;
+      handActive = false;
+      previewBox.style.display = 'none';
+      cameraTrigger.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg> 激活隔空手势`;
+      cameraTrigger.classList.remove('active');
+      cameraTrigger.disabled = false;
+      indicatorLight.className = "status-light";
+    }
+
+    function onHandGestureTracking(results) {
+      skeletonCanvas.width = webcam.videoWidth;
+      skeletonCanvas.height = webcam.videoHeight;
+      sCtx.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
+
+      sCtx.save();
+      sCtx.translate(skeletonCanvas.width, 0);
+      sCtx.scale(-1, 1);
+      sCtx.drawImage(results.image, 0, 0, skeletonCanvas.width, skeletonCanvas.height);
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+
+        // 骨骼关键节点
+        for (let i = 0; i < landmarks.length; i++) {
+          const lm = landmarks[i];
+          sCtx.beginPath();
+          sCtx.arc(lm.x * skeletonCanvas.width, lm.y * skeletonCanvas.height, 4, 0, Math.PI * 2);
+          sCtx.fillStyle = '#007aff';
+          sCtx.shadowBlur = 4;
+          sCtx.shadowColor = '#007aff';
+          sCtx.fill();
+        }
+
+        handActive = true;
+
+        const indexTip = landmarks[8];
+        const thumbTip = landmarks[4];
+        const wrist = landmarks[0];
+
+        // 平滑对齐
+        lerpedHand.x += ((1.0 - indexTip.x - 0.5) * width * 1.5 - lerpedHand.x) * 0.16;
+        lerpedHand.y += ((indexTip.y - 0.5) * height * 1.5 - lerpedHand.y) * 0.16;
+
+        // 双指 Pinch 缩放
+        if (thumbTip && indexTip) {
+          const pDistance = Math.sqrt(
+            Math.pow(thumbTip.x - indexTip.x, 2) +
+            Math.pow(thumbTip.y - indexTip.y, 2)
+          );
+          targetZoom = Math.max(0.005, Math.min(150.0, pDistance * 6.5));
+        }
+
+        // 张合度大爆炸
+        const fingers = [8, 12, 16, 20];
+        let totalSpread = 0;
+        fingers.forEach(id => {
+          if (landmarks[id] && wrist) {
+            totalSpread += Math.sqrt(
+              Math.pow(landmarks[id].x - wrist.x, 2) +
+              Math.pow(landmarks[id].y - wrist.y, 2)
+            );
+          }
+        });
+
+        const stateAssembleBtn = document.getElementById('btn-state-assemble');
+        const stateExplodeBtn = document.getElementById('btn-state-explode');
+
+        if (totalSpread > 1.4) {
+          if (currentPhysicsState !== STATES.EXPLODED) {
+            currentPhysicsState = STATES.EXPLODED;
+            stateExplodeBtn.classList.add('active');
+            stateAssembleBtn.classList.remove('active');
+          }
+        } else if (totalSpread < 0.8) {
+          if (currentPhysicsState !== STATES.ASSEMBLED) {
+            currentPhysicsState = STATES.ASSEMBLED;
+            stateAssembleBtn.classList.add('active');
+            stateExplodeBtn.classList.remove('active');
+          }
+        }
+      } else {
+        handActive = false;
+      }
+      sCtx.restore();
+    }
+
+    // ==========================================
+    // 12. 全管线构建与安全执行起航
+    // ==========================================
+    resize();
+    initSprites();
+    buildStateData();
+
+    // 倾斜同心星环
+    buildDensityTiltedRings(2200, 185, 50, 1.15, 0.45, 'gold');
+    buildDensityTiltedRings(1200, 245, 24, 1.12, -0.22, 'red');
+
+    // 绘制 3D 行星 (斐波那契球面算法)
+    create3DPlanet(10, 210, 0.022, 120, 'white');  
+    create3DPlanet(18, 290, 0.015, 220, 'purple'); 
+    create3DPlanet(16, 380, 0.010, 200, 'white');  
+    create3DPlanet(14, 460, 0.006, 160, 'red');    
+
+    initDeepSpace();
+    initInteraction();
+
+    // 执行防崩溃渲染自更新管线
+    loop();
+  </script>
+</body>
+</html>
+
+<!--
+  ========================================================================================
+  // V30 OOM与崩溃修复版技术演进总结：
+  
+  为彻底根治因设备差异（尤其是高 DPR 移动端）导致的系统卡死、内存溢出（OOM）及主循环未定义异常，
+  我们重构了系统底层的图形与事件监听逻辑：
+
+  1. 离线画布彻底解耦 (Safe Offscreen Geometry Isolation)：
+     将执行口号与党徽像素扫描的离线 Canvas `scanCanvas` 写死为绝对安全的 800x800 常数宽高。
+     绝对不跟随高分屏乘 DPR！这样保证了在任何超高清屏幕上， `getImageData` 数组的大小恒定在 2.56 MB 的安全负载，
+     从内存分配源头上彻底杜绝了手机端浏览器频繁触发的 OOM 强制杀进程闪退 Bug。
+
+  2. 极值过滤和触控防护 (Strict Null & Touch Guards)：
+     在 `touchmove` 事件中，增加了严格的物理指针存在性判定（如 `e.touches[0]` 验证），规避部分浏览器多指频繁触发时，指针数组不完整引发的 `NaN` 和计算崩溃。
+     同时利用 `Number.isFinite()` 实时防御 `zoom` 的空指针，避免 3D 矩阵投影计算中因除以零导致的卡死。
+
+  3. 统一粒子类安全工厂模型 (Unified Safe Particle Factory Model)：
+     对所有粒子类（Sun恒星点、Ring同心环星子、Planets球面星子）全部使用统一的 `createSafeParticle` 结构生产。
+     主循环排序、投影和扫刷算法不需要做任何额外的 `if(p.type === ...)` 类型属性判定。属性全部对齐归零，
+     彻底杜绝了属性缺失导致的 undefined 阻塞渲染进程 Bug，并配合 `try...catch` 异常熔断器，保障星寰太阳系丝滑运行。
+  ========================================================================================
+-->
