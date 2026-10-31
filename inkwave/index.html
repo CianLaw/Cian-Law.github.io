@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>INKWAVE 安卓版下载</title>
+<meta name="description" content="INKWAVE 安卓版 APK 下载页，横屏沉浸式体验，支持 HUD 自定义布局。">
+<style>
+  :root{
+    --bg:#0d0b12;
+    --line:rgba(255,255,255,.1);
+    --text:#f4f1ff;
+    --muted:#9b93b5;
+    --ink:#5de4ff;
+    --pink:#ff4fa3;
+    --lime:#c6ff4f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    min-height:100vh;
+    font-family:"SF Pro Display","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 700px at 15% -10%, rgba(93,228,255,.20), transparent 60%),
+      radial-gradient(900px 600px at 90% 10%, rgba(255,79,163,.18), transparent 55%),
+      radial-gradient(800px 700px at 50% 120%, rgba(198,255,79,.10), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px 20px 40px;
+    overflow-x:hidden;
+  }
+  .wrap{width:100%;max-width:860px}
+  .logo{
+    font-weight:900;
+    letter-spacing:.22em;
+    font-size:clamp(34px,8vw,64px);
+    line-height:1;
+    background:linear-gradient(100deg,var(--ink),#fff 40%,var(--pink) 75%,var(--lime));
+    -webkit-background-clip:text;background-clip:text;
+    color:transparent;
+    filter:drop-shadow(0 0 26px rgba(93,228,255,.25));
+  }
+  .sub{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:clamp(13px,2.4vw,16px);
+    letter-spacing:.06em;
+  }
+  .card{
+    margin-top:28px;
+    background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:clamp(18px,4vw,32px);
+    backdrop-filter:blur(14px);
+    box-shadow:0 24px 70px rgba(0,0,0,.45);
+  }
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:12px;
+    width:100%;
+    padding:20px 24px;
+    border:none;border-radius:16px;
+    font-size:clamp(17px,3.4vw,21px);
+    font-weight:800;letter-spacing:.08em;
+    color:#07121a;
+    background:linear-gradient(100deg,var(--ink),#a6f3ff 45%,var(--lime));
+    text-decoration:none;
+    box-shadow:0 14px 40px rgba(93,228,255,.28), inset 0 1px 0 rgba(255,255,255,.6);
+    transition:transform .18s ease, box-shadow .18s ease;
+    cursor:pointer;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn:hover{box-shadow:0 18px 48px rgba(93,228,255,.42), inset 0 1px 0 rgba(255,255,255,.6)}
+  .btn svg{width:24px;height:24px;flex:0 0 auto}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;color:var(--muted);font-size:13px}
+  .pill{border:1px solid var(--line);border-radius:999px;padding:7px 12px;background:rgba(255,255,255,.03)}
+  .grid{margin-top:26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .feat{border:1px solid var(--line);border-radius:16px;padding:16px;background:rgba(255,255,255,.03)}
+  .feat h3{font-size:15px;letter-spacing:.04em;margin-bottom:6px}
+  .feat p{font-size:13px;line-height:1.6;color:var(--muted)}
+  .feat h3 span{color:var(--ink)}
+  h2{margin-top:34px;font-size:clamp(16px,3vw,20px);letter-spacing:.06em}
+  ol{margin-top:14px;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.9}
+  ol b{color:var(--text)}
+  footer{margin-top:32px;font-size:12px;color:#6f6887;line-height:1.8}
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,80px);
+    background:#1d1930;border:1px solid var(--line);
+    color:var(--text);font-size:13px;padding:12px 18px;border-radius:12px;
+    opacity:0;transition:.25s ease;pointer-events:none;max-width:calc(100vw - 40px);
+  }
+  .toast.on{transform:translate(-50%,0);opacity:1}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <div class="logo">INKWAVE</div>
+    <p class="sub">安卓版 · 横屏沉浸式 · 自定义 HUD 布局</p>
+  </header>
+
+  <section class="card">
+    <a class="btn" id="dl" href="./INKWAVE.apk" download="INKWAVE.apk">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/>
+      </svg>
+      下载 INKWAVE.apk
+    </a>
+    <div class="meta">
+      <span class="pill">版本 1.0</span>
+      <span class="pill">7.8 MB</span>
+      <span class="pill">Android 7.0+</span>
+      <span class="pill">横屏全屏</span>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="feat"><h3><span>01</span> 沉浸式横屏</h3><p>自动隐藏状态栏与导航栏，强制横屏运行，进入即玩。</p></div>
+    <div class="feat"><h3><span>02</span> 自定义 HUD</h3><p>摇杆与技能按钮可拖动、缩放、调透明度，布局自动保存。</p></div>
+    <div class="feat"><h3><span>03</span> 千元机可跑</h3><p>Android 7.0 及以上，7.8MB 安装包，无需额外数据下载。</p></div>
+  </div>
+
+  <h2>安装步骤</h2>
+  <ol>
+    <li>点击上方按钮下载 <b>INKWAVE.apk</b>。</li>
+    <li>打开文件；若提示“未知来源应用”，在设置中允许 <b>浏览器 / 文件管理</b> 安装。</li>
+    <li>部分手机会提示“未经 Play 保护机制检测”，选择 <b>仍要安装</b> 即可。</li>
+    <li>安装完成后横屏打开，首次进入请在设置中按提示校准 HUD。</li>
+  </ol>
+
+  <footer>
+    本页面仅用于分发 INKWAVE 安卓安装包。安装包为调试签名版本，仅供体验测试。<br>
+    如手机已安装旧版本，请先卸载再安装。
+  </footer>
+</main>
+
+<div class="toast" id="toast">正在开始下载…</div>
+<script>
+  const toast = document.getElementById('toast');
+  document.getElementById('dl').addEventListener('click', () => {
+    toast.classList.add('on');
+    setTimeout(() => toast.classList.remove('on'), 2200);
+  });
+</script>
+</body>
+</html>
